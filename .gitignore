@@ -1,0 +1,7 @@
+Signing/
+.build/
+dist/
+AppIcon.iconset/
+.DS_Store
+*.xcodeproj
+.swiftpm/

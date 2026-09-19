@@ -33,6 +33,9 @@ final class JoypadModel {
     var lastIncoming: String = "No iPhone has reached this Mac yet"
     var lastSend: String = "No keys sent yet"
     var targetName: String = "—"
+    var hidReady = false
+    var hidState: OpenEmuHIDState = .needsKarabiner
+    var karabinerInstalled = false
     var usbSetupReady = false
     var connectionPath: ConnectionPath {
         didSet {
@@ -54,7 +57,6 @@ final class JoypadModel {
         } else {
             connectionPath = .wifi
         }
-        startServer()
         Task { @MainActor in
             self.refresh()
             self.timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
@@ -62,6 +64,12 @@ final class JoypadModel {
                     JoypadModel.shared.refresh()
                 }
             }
+        }
+    }
+
+    func ensureServer() {
+        if server == nil {
+            startServer()
         }
     }
 
@@ -97,6 +105,15 @@ final class JoypadModel {
         }
     }
 
+    func openKarabinerDownload() {
+        HIDHelperService.openKarabinerDownload()
+    }
+
+    func allowHIDHelper() {
+        HIDHelperService.openLoginItems()
+        refresh()
+    }
+
     func copyPreferredURL() {
         guard !preferredURL.isEmpty else { return }
         NSPasteboard.general.clearContents()
@@ -119,6 +136,9 @@ final class JoypadModel {
                     model.pressed = keys
                     model.lastSend = model.injector.lastStatus
                     model.targetName = model.injector.targetName
+                    model.hidReady = model.injector.hidReady
+                    model.hidState = HIDHelperService.state(client: model.injector.hid)
+                    model.karabinerInstalled = HIDHelperService.karabinerInstalled
                     model.accessibilityTrusted = KeyInjector.isTrusted
                 }
             },
@@ -147,6 +167,10 @@ final class JoypadModel {
         accessibilityTrusted = KeyInjector.isTrusted
         lastSend = injector.lastStatus
         targetName = injector.targetName
+        injector.hid.refreshStatus()
+        hidReady = injector.hidReady
+        hidState = HIDHelperService.state(client: injector.hid)
+        karabinerInstalled = HIDHelperService.karabinerInstalled
         usbConnected = USBMonitor.iPhoneConnected()
         links = NetworkAddresses.links(port: port)
         usbSetupReady = links.contains { $0.kind == .usb && ($0.ip.hasPrefix("192.168.2.") || $0.ip.hasPrefix("172.20.10.")) }

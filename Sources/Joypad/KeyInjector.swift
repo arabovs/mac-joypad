@@ -8,9 +8,11 @@ final class KeyInjector: NSObject {
     private let lock = NSLock()
     private var held: [String: Int] = [:]
     private var lastApp: NSRunningApplication?
+    let hid = HIDHelperClient()
 
     private(set) var lastStatus = "No keys sent yet"
     private(set) var targetName = "—"
+    var hidReady: Bool { hid.isReady }
 
     private let codes: [String: CGKeyCode] = [
         "up": 0x7E,
@@ -84,6 +86,7 @@ final class KeyInjector: NSObject {
         }
         let snapshot = Set(held.keys)
         lock.unlock()
+        _ = hid.send(held: snapshot)
         if shouldPost {
             DispatchQueue.main.async { [weak self] in
                 self?.post(key: key, down: postDown)
@@ -97,6 +100,7 @@ final class KeyInjector: NSObject {
         let keys = Array(held.keys)
         held.removeAll()
         lock.unlock()
+        _ = hid.send(held: [])
         DispatchQueue.main.async { [weak self] in
             for key in keys { self?.post(key: key, down: false) }
         }
@@ -163,7 +167,7 @@ final class KeyInjector: NSObject {
         event.post(tap: .cghidEventTap)
         sendSystemEvents(key: key, code: code, down: down)
 
-        lastStatus = "\(key) \(down ? "down" : "up") → \(targetName)  ax=\(Self.isTrusted) pids=\(pids.count)"
+        lastStatus = "\(key) \(down ? "down" : "up") → \(targetName)  ax=\(Self.isTrusted) hid=\(hid.isReady) pids=\(pids.count)"
     }
 
     private func makeEvent(code: CGKeyCode, key: String, down: Bool) -> CGEvent? {

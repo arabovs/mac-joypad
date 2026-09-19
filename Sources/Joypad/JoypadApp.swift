@@ -21,18 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: JoypadWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let installed = "/Applications/Joypad.app"
-        let running = URL(fileURLWithPath: Bundle.main.bundlePath).standardizedFileURL.path
-        if FileManager.default.fileExists(atPath: installed),
-           running != URL(fileURLWithPath: installed).standardizedFileURL.path {
-            NSWorkspace.shared.open(URL(fileURLWithPath: installed))
-            DispatchQueue.main.async {
-                NSApp.terminate(nil)
-            }
-            return
-        }
-
         NSApp.setActivationPolicy(.regular)
+        HIDHelperService.ensureRegistered()
+        JoypadModel.shared.ensureServer()
         let hosting = NSHostingView(rootView: ContentView(model: JoypadModel.shared))
         hosting.sizingOptions = .intrinsicContentSize
         let size = NSSize(width: 684, height: 860)

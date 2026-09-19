@@ -1,6 +1,7 @@
 Signing/
 .build/
 dist/
+vendor/
 AppIcon.iconset/
 .DS_Store
 *.xcodeproj

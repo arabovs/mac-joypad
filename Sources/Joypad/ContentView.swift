@@ -59,6 +59,10 @@ struct ContentView: View {
                 title: model.clients == 1 ? "1 controller" : "\(model.clients) controllers",
                 ok: model.clients > 0
             )
+            StatusChip(
+                title: model.hidState.chipTitle,
+                ok: model.hidState.isLive
+            )
         }
     }
 
@@ -130,6 +134,19 @@ struct ContentView: View {
         }
     }
 
+    private var openEmuHelp: String {
+        switch model.hidState {
+        case .live:
+            return "OpenEmu: the Karabiner virtual keyboard is live. Keep Input set to Keyboard and use the bindings you already made. Grant OpenEmu Input Monitoring if the game still sees nothing."
+        case .needsKarabiner:
+            return "OpenEmu needs Karabiner-Elements once. Install it, allow the system extension, then come back and allow the Joypad HID helper. Cursor keys still work without that."
+        case .needsApproval:
+            return "Karabiner is installed. Click Allow HID helper, then enable Joypad in Login Items / Background Items. macOS will ask for an admin password once."
+        case .helperOff:
+            return "The HID helper is registered but the Karabiner virtual keyboard is not ready. Open Karabiner-Elements once so its driver is running, then retry a pad button."
+        }
+    }
+
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(model.accessibilityTrusted ? "Mac key control is allowed" : "Allow Accessibility so buttons can press keys")
@@ -150,10 +167,20 @@ struct ContentView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            Text(openEmuHelp)
+                .font(.caption)
+                .foregroundStyle(model.hidState.isLive ? Color.secondary : Color.orange)
+                .fixedSize(horizontal: false, vertical: true)
+                .help(model.hidState.chipTitle)
             HStack(spacing: 8) {
                 Button("Open Accessibility settings") { model.openAccessibilitySettings() }
                     .buttonStyle(.borderedProminent)
                     .help("Opens System Settings → Privacy & Security → Accessibility")
+                if !model.karabinerInstalled {
+                    Button("Get Karabiner-Elements") { model.openKarabinerDownload() }
+                } else if !model.hidState.isLive {
+                    Button("Allow HID helper") { model.allowHIDHelper() }
+                }
                 if !model.accessibilityTrusted {
                     Button("Quit Joypad") { NSApp.terminate(nil) }
                 }
@@ -170,11 +197,13 @@ struct ContentView: View {
                 helpLine("1. Put the iPhone on the same Wi‑Fi as this Mac. Turn Personal Hotspot OFF.")
                 helpLine("2. Open Safari, or Chrome with Always use secure connections OFF, to \(model.preferredURL)")
                 helpLine("3. Click Cursor or the game, then use the phone. D‑pad = arrows. QWER/ASDF = buttons. Select = J. Start = K.")
+                helpLine("OpenEmu: keep Input set to Keyboard (the bindings you already made). Install Karabiner-Elements, allow the Joypad HID helper, and give OpenEmu Input Monitoring.")
             } else {
                 helpLine("1. Plug the iPhone in with USB‑C and tap Trust. Turn Personal Hotspot OFF.")
                 helpLine("2. On the Mac click Open Internet Sharing. Share Wi‑Fi to iPhone USB, then enable Internet Sharing.")
                 helpLine("3. Open Safari, or Chrome with Always use secure connections OFF, to http://192.168.2.1:7777")
                 helpLine("4. Click Cursor or the game, then use the phone. D‑pad = arrows. QWER/ASDF = buttons. Select = J. Start = K.")
+                helpLine("OpenEmu: keep Input set to Keyboard (the bindings you already made). Install Karabiner-Elements, allow the Joypad HID helper, and give OpenEmu Input Monitoring.")
             }
         }
         .font(.caption)

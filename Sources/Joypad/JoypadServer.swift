@@ -34,6 +34,8 @@ final class JoypadServer {
         self.onIncoming = onIncoming
     }
 
+    private var bindAttempts = 0
+
     func start() {
         queue.async { [weak self] in
             self?.bind(from: self?.port ?? 7777)
@@ -65,9 +67,11 @@ final class JoypadServer {
             listener.stateUpdateHandler = { [weak self] state in
                 switch state {
                 case .ready:
+                    self?.bindAttempts = 0
                     self?.onReady(startPort)
                 case .failed(let error):
                     self?.onError(error.localizedDescription)
+                    self?.retryBind(port: startPort)
                 default:
                     break
                 }
@@ -80,6 +84,18 @@ final class JoypadServer {
             self.listeners = [listener]
         } catch {
             onError(error.localizedDescription)
+            retryBind(port: startPort)
+        }
+    }
+
+    private func retryBind(port: UInt16) {
+        bindAttempts += 1
+        guard bindAttempts <= 12 else { return }
+        listener?.cancel()
+        listeners.forEach { $0.cancel() }
+        listeners.removeAll()
+        queue.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            self?.bind(from: port)
         }
     }
 

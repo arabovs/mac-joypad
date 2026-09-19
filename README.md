@@ -39,13 +39,19 @@ Rebuilds change the code signature, so Accessibility may need to be granted agai
 
 Add the page to the iPhone Home Screen from Safari for a fullscreen controller.
 
-## OpenEmu
+Cursor and TextEdit work after Accessibility. **OpenEmu games need Karabiner** (next section).
 
-OpenEmu’s running game ignores fake Mac keystrokes. Joypad talks to **Karabiner-Elements**’ virtual HID keyboard instead.
+## Karabiner-Elements
 
-1. Install [Karabiner-Elements](https://karabiner-elements.pqrs.org/) and allow its system extension. You do not need remaps.
-2. In Joypad, click **Allow HID helper** and enable it in Login Items (admin password once). Wait until the chip says **OpenEmu keyboard live**.
-3. In OpenEmu, keep **Input = Keyboard** with the bindings above. Grant **OpenEmu** Input Monitoring if it asks.
+OpenEmu’s running game ignores fake keystrokes. It only sees a real HID keyboard. Joypad uses **Karabiner-Elements** for that.
+
+1. Download and install **[Karabiner-Elements](https://karabiner-elements.pqrs.org/)**.
+2. Open Karabiner once and **allow the system extension** when macOS asks. You do not need remaps or extra Karabiner rules — only the driver.
+3. In Joypad, click **Allow HID helper**, then enable Joypad in **Login Items / Background Items** (admin password once).
+4. Wait until the Joypad chip says **OpenEmu keyboard live**.
+5. In OpenEmu, keep **Input = Keyboard** with the bindings above. If the game still sees nothing, grant **Input Monitoring** to **OpenEmu** (not Joypad).
+
+Without Karabiner, the phone pad still types into Cursor; OpenEmu in-game will not see it.
 
 ## Notes
 

@@ -8,7 +8,11 @@ final class KeyInjector: NSObject {
     private let lock = NSLock()
     private var held: [String: Int] = [:]
     private var lastApp: NSRunningApplication?
+    private var holdTimer: DispatchSourceTimer?
+    private var holdStartedAt: Date?
+    private var delayedMoveUps: [String: DispatchWorkItem] = [:]
     let hid = HIDHelperClient()
+    var onHeldChanged: ((Set<String>) -> Void)?
 
     private(set) var lastStatus = "No keys sent yet"
     private(set) var targetName = "—"
@@ -66,8 +70,48 @@ final class KeyInjector: NSObject {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
+    private let moveKeys: Set<String> = ["up", "down", "left", "right"]
+    private let moveReleaseDelay: TimeInterval = 0.075
+
     func set(key: String, down: Bool) -> Set<String> {
         guard codes[key] != nil else { return currentlyHeld() }
+        if moveKeys.contains(key) {
+            if down {
+                cancelMoveRelease(key)
+                if currentlyHeld().contains(key) {
+                    return currentlyHeld()
+                }
+            } else {
+                scheduleMoveRelease(key)
+                return currentlyHeld()
+            }
+        }
+        return apply(key: key, down: down)
+    }
+
+    func releaseAll() -> Set<String> {
+        lock.lock()
+        let pending = Array(delayedMoveUps.values)
+        delayedMoveUps.removeAll()
+        let keys = Array(held.keys)
+        held.removeAll()
+        lock.unlock()
+        pending.forEach { $0.cancel() }
+        _ = hid.send(held: [])
+        syncHoldTimer([])
+        DispatchQueue.main.async { [weak self] in
+            for key in keys { self?.post(key: key, down: false, repeating: false) }
+        }
+        return []
+    }
+
+    func currentlyHeld() -> Set<String> {
+        lock.lock()
+        defer { lock.unlock() }
+        return Set(held.keys)
+    }
+
+    private func apply(key: String, down: Bool) -> Set<String> {
         lock.lock()
         let current = held[key, default: 0]
         var shouldPost = false
@@ -87,30 +131,37 @@ final class KeyInjector: NSObject {
         let snapshot = Set(held.keys)
         lock.unlock()
         _ = hid.send(held: snapshot)
+        syncHoldTimer(snapshot)
         if shouldPost {
             DispatchQueue.main.async { [weak self] in
-                self?.post(key: key, down: postDown)
+                self?.post(key: key, down: postDown, repeating: false)
             }
         }
         return snapshot
     }
 
-    func releaseAll() -> Set<String> {
+    private func cancelMoveRelease(_ key: String) {
         lock.lock()
-        let keys = Array(held.keys)
-        held.removeAll()
+        let work = delayedMoveUps.removeValue(forKey: key)
         lock.unlock()
-        _ = hid.send(held: [])
-        DispatchQueue.main.async { [weak self] in
-            for key in keys { self?.post(key: key, down: false) }
-        }
-        return []
+        work?.cancel()
     }
 
-    func currentlyHeld() -> Set<String> {
+    private func scheduleMoveRelease(_ key: String) {
+        cancelMoveRelease(key)
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.lock.lock()
+            let pending = self.delayedMoveUps.removeValue(forKey: key)
+            self.lock.unlock()
+            guard pending != nil else { return }
+            let snapshot = self.apply(key: key, down: false)
+            self.onHeldChanged?(snapshot)
+        }
         lock.lock()
-        defer { lock.unlock() }
-        return Set(held.keys)
+        delayedMoveUps[key] = work
+        lock.unlock()
+        DispatchQueue.main.asyncAfter(deadline: .now() + moveReleaseDelay, execute: work)
     }
 
     @objc private func frontAppChanged(_ note: Notification) {
@@ -147,33 +198,69 @@ final class KeyInjector: NSObject {
         }
     }
 
-    private func post(key: String, down: Bool) {
-        guard let code = codes[key], let event = makeEvent(code: code, key: key, down: down) else { return }
+    private func syncHoldTimer(_ snapshot: Set<String>) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if snapshot.isEmpty {
+                self.holdTimer?.cancel()
+                self.holdTimer = nil
+                self.holdStartedAt = nil
+                return
+            }
+            if self.holdTimer != nil { return }
+            self.holdStartedAt = Date()
+            let timer = DispatchSource.makeTimerSource(queue: .main)
+            timer.schedule(deadline: .now() + .milliseconds(16), repeating: .milliseconds(16))
+            timer.setEventHandler { [weak self] in self?.repeatHeld() }
+            timer.resume()
+            self.holdTimer = timer
+        }
+    }
+
+    private func repeatHeld() {
+        let keys = currentlyHeld()
+        guard !keys.isEmpty else { return }
+        _ = hid.send(held: keys)
+        let elapsed = Date().timeIntervalSince(holdStartedAt ?? Date())
+        guard elapsed >= 0.18 else { return }
+        for key in keys {
+            post(key: key, down: true, repeating: true)
+        }
+    }
+
+    private func post(key: String, down: Bool, repeating: Bool) {
+        guard let code = codes[key], let event = makeEvent(code: code, key: key, down: down, repeating: repeating) else { return }
 
         guard let target = targetApp() else {
             event.post(tap: .cghidEventTap)
-            lastStatus = "No front app. Click Cursor or TextEdit, then press again."
+            if !repeating {
+                lastStatus = "No front app. Click Cursor or TextEdit, then press again."
+            }
             return
         }
 
         targetName = target.localizedName ?? "unknown"
-        NSApp.yieldActivation(to: target)
-        target.activate()
+        if !repeating {
+            NSApp.yieldActivation(to: target)
+            target.activate()
+        }
 
         let pids = inputPids(for: target)
         for pid in pids {
             event.postToPid(pid)
         }
         event.post(tap: .cghidEventTap)
-        sendSystemEvents(key: key, code: code, down: down)
+        if !repeating {
+            sendSystemEvents(key: key, code: code, down: down)
+        }
 
-        lastStatus = "\(key) \(down ? "down" : "up") → \(targetName)  ax=\(Self.isTrusted) hid=\(hid.isReady) pids=\(pids.count)"
+        lastStatus = "\(key) \(down ? "down" : "up")\(repeating ? " hold" : "") → \(targetName)  ax=\(Self.isTrusted) hid=\(hid.isReady) pids=\(pids.count)"
     }
 
-    private func makeEvent(code: CGKeyCode, key: String, down: Bool) -> CGEvent? {
+    private func makeEvent(code: CGKeyCode, key: String, down: Bool, repeating: Bool) -> CGEvent? {
         guard let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down) else { return nil }
         event.flags = []
-        event.setIntegerValueField(.keyboardEventAutorepeat, value: 0)
+        event.setIntegerValueField(.keyboardEventAutorepeat, value: repeating ? 1 : 0)
         if let glyph = glyphs[key], !glyph.isEmpty {
             var utf16 = Array(glyph.utf16)
             utf16.withUnsafeMutableBufferPointer { buffer in

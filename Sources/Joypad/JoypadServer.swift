@@ -32,6 +32,9 @@ final class JoypadServer {
         self.onReady = onReady
         self.onError = onError
         self.onIncoming = onIncoming
+        injector.onHeldChanged = { held in
+            onKeysChanged(held)
+        }
     }
 
     private var bindAttempts = 0

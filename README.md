@@ -6,6 +6,14 @@
 
 Use an iPhone as a Mac gamepad. The pad is a page in Safari. The Mac app sends keys to whatever is in front.
 
+<p align="center">
+  <img src="docs/mac.png" width="640" alt="Joypad Mac app">
+</p>
+
+<p align="center">
+  <img src="docs/pad.png" width="640" alt="Joypad on iPhone">
+</p>
+
 | Phone | Mac |
 | --- | --- |
 | Stick N E S W | Arrow keys |

@@ -10,6 +10,8 @@ final class KeyInjector: NSObject {
     private var lastApp: NSRunningApplication?
     private var holdTimer: DispatchSourceTimer?
     private var holdStartedAt: Date?
+    private var faceHoldStartedAt: Date?
+    private var turboDown = true
     private var delayedMoveUps: [String: DispatchWorkItem] = [:]
     let hid = HIDHelperClient()
     var onHeldChanged: ((Set<String>) -> Void)?
@@ -23,6 +25,10 @@ final class KeyInjector: NSObject {
         "down": 0x7D,
         "left": 0x7B,
         "right": 0x7C,
+        "ne": 0x5C,
+        "se": 0x55,
+        "sw": 0x53,
+        "nw": 0x59,
         "q": 0x0C,
         "w": 0x0D,
         "e": 0x0E,
@@ -38,7 +44,8 @@ final class KeyInjector: NSObject {
     private let glyphs: [String: String] = [
         "q": "q", "w": "w", "e": "e", "r": "r",
         "a": "a", "s": "s", "d": "d", "f": "f",
-        "j": "j", "k": "k"
+        "j": "j", "k": "k",
+        "ne": "9", "se": "3", "sw": "1", "nw": "7"
     ]
 
     override init() {
@@ -70,8 +77,12 @@ final class KeyInjector: NSObject {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
-    private let moveKeys: Set<String> = ["up", "down", "left", "right"]
+    private let moveKeys: Set<String> = ["up", "down", "left", "right", "ne", "se", "sw", "nw"]
+    private let faceKeys: Set<String> = ["q", "w", "e", "r", "a", "s", "d", "f"]
     private let moveReleaseDelay: TimeInterval = 0.075
+    private let turboDelay: TimeInterval = 0.14
+    private let turboPeriod: TimeInterval = 0.1
+    private let turboDownDuty: TimeInterval = 0.055
 
     func set(key: String, down: Bool) -> Set<String> {
         guard codes[key] != nil else { return currentlyHeld() }
@@ -205,10 +216,13 @@ final class KeyInjector: NSObject {
                 self.holdTimer?.cancel()
                 self.holdTimer = nil
                 self.holdStartedAt = nil
+                self.faceHoldStartedAt = nil
+                self.turboDown = true
                 return
             }
             if self.holdTimer != nil { return }
             self.holdStartedAt = Date()
+            self.turboDown = true
             let timer = DispatchSource.makeTimerSource(queue: .main)
             timer.schedule(deadline: .now() + .milliseconds(16), repeating: .milliseconds(16))
             timer.setEventHandler { [weak self] in self?.repeatHeld() }
@@ -220,12 +234,40 @@ final class KeyInjector: NSObject {
     private func repeatHeld() {
         let keys = currentlyHeld()
         guard !keys.isEmpty else { return }
-        _ = hid.send(held: keys)
-        let elapsed = Date().timeIntervalSince(holdStartedAt ?? Date())
-        guard elapsed >= 0.18 else { return }
-        for key in keys {
-            post(key: key, down: true, repeating: true)
+
+        let dirs = keys.intersection(moveKeys)
+        let faces = keys.intersection(faceKeys)
+        let rest = keys.subtracting(moveKeys).subtracting(faceKeys)
+        var hidKeys = dirs.union(rest)
+
+        let elapsed: TimeInterval
+        if faces.isEmpty {
+            faceHoldStartedAt = nil
+            turboDown = true
+            elapsed = 0
+        } else {
+            if faceHoldStartedAt == nil {
+                faceHoldStartedAt = Date()
+                turboDown = true
+            }
+            elapsed = Date().timeIntervalSince(faceHoldStartedAt ?? Date())
         }
+        var facesDown = true
+        if !faces.isEmpty, elapsed >= turboDelay {
+            let phase = (elapsed - turboDelay).truncatingRemainder(dividingBy: turboPeriod)
+            facesDown = phase < turboDownDuty
+        }
+        if facesDown {
+            hidKeys.formUnion(faces)
+        }
+
+        if facesDown != turboDown {
+            turboDown = facesDown
+            for key in faces {
+                post(key: key, down: facesDown, repeating: false)
+            }
+        }
+        _ = hid.send(held: hidKeys)
     }
 
     private func post(key: String, down: Bool, repeating: Bool) {
@@ -240,18 +282,12 @@ final class KeyInjector: NSObject {
         }
 
         targetName = target.localizedName ?? "unknown"
-        if !repeating {
-            NSApp.yieldActivation(to: target)
-            target.activate()
-        }
-
         let pids = inputPids(for: target)
         for pid in pids {
             event.postToPid(pid)
         }
-        event.post(tap: .cghidEventTap)
-        if !repeating {
-            sendSystemEvents(key: key, code: code, down: down)
+        if let front = NSWorkspace.shared.frontmostApplication, !isSelf(front) {
+            event.post(tap: .cghidEventTap)
         }
 
         lastStatus = "\(key) \(down ? "down" : "up")\(repeating ? " hold" : "") → \(targetName)  ax=\(Self.isTrusted) hid=\(hid.isReady) pids=\(pids.count)"
@@ -270,22 +306,6 @@ final class KeyInjector: NSObject {
             }
         }
         return event
-    }
-
-    private func sendSystemEvents(key: String, code: CGKeyCode, down: Bool) {
-        let script: String
-        if let glyph = glyphs[key] {
-            script = "tell application \"System Events\" to key \(down ? "down" : "up") \"\(glyph)\""
-        } else if down {
-            script = "tell application \"System Events\" to key code \(code)"
-        } else {
-            return
-        }
-        var error: NSDictionary?
-        NSAppleScript(source: script)?.executeAndReturnError(&error)
-        if let message = error?["NSAppleScriptErrorMessage"] {
-            lastStatus += " applescript=\(message)"
-        }
     }
 
     private func inputPids(for app: NSRunningApplication) -> [pid_t] {

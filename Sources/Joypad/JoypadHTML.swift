@@ -44,26 +44,42 @@ enum JoypadHTML {
   }
   header {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 8px; min-height: 28px;
+    gap: 10px; min-height: 36px;
   }
-  .brand { letter-spacing: 0.22em; font-weight: 800; font-size: 11px; flex: 0 0 auto; }
-  .modes {
-    display: flex; gap: 4px; padding: 3px;
-    border: 1px solid var(--line); background: var(--panel);
-    border-radius: 999px;
+  .brand {
+    letter-spacing: 0.2em; font-weight: 700; font-size: 11px;
+    color: #c5cbd8; flex: 0 0 auto;
   }
-  .mode {
-    border: 0; border-radius: 999px; padding: 5px 10px;
-    background: transparent; color: var(--muted);
-    font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+  .controls {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap;
   }
-  .mode.on {
-    background: var(--lime); color: #0b0d12;
+  .seg {
+    display: inline-flex; align-items: center; gap: 2px;
+    padding: 3px; border-radius: 8px;
+    background: #0c1017; border: 1px solid #2a3140;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .seg-k {
+    font-size: 8px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #6a7388;
+    padding: 0 8px; white-space: nowrap;
+  }
+  .opt {
+    border: 0; border-radius: 6px; padding: 6px 11px;
+    background: transparent; color: #8b93a7;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+    line-height: 1.1; white-space: nowrap;
+    -webkit-appearance: none; appearance: none;
+  }
+  .opt.on {
+    background: #1e2533; color: #f4f6fb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
   }
   .pill {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex: 0 0 auto;
     border: 1px solid var(--line); background: var(--panel);
-    border-radius: 999px; padding: 4px 8px; font-size: 10px; color: var(--muted);
+    border-radius: 8px; padding: 6px 10px; font-size: 10px; color: var(--muted);
   }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: #ff5f57; }
   .dot.on { background: var(--lime); box-shadow: 0 0 12px var(--glow); }
@@ -161,7 +177,7 @@ enum JoypadHTML {
   .keys[data-style="6"] .btn:nth-child(3).pressed {
     transform: translate(12px, -4px);
   }
-  .btn:focus, .btn:focus-visible, .sys:focus { outline: none; }
+  .btn:focus, .btn:focus-visible, .sys:focus, .opt:focus { outline: none; }
   .dpad {
     width: 100%; aspect-ratio: 1; position: relative;
   }
@@ -185,11 +201,11 @@ enum JoypadHTML {
   .se { bottom: 8%; right: 8%; left: auto; top: auto; }
   .sw { bottom: 8%; left: 8%; top: auto; }
   .nw { top: 8%; left: 8%; }
-  .stage[data-style="6"] .diag { display: grid; }
-  .stage[data-style="6"] .ring {
+  .stage[data-stick="8"] .diag { display: grid; }
+  .stage[data-stick="8"] .ring {
     clip-path: polygon(29% 0%, 71% 0%, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0% 71%, 0% 29%);
   }
-  .stage[data-style="6"] .dir { font-size: 18px; }
+  .stage[data-stick="8"] .dir { font-size: 18px; }
   .mid {
     display: flex;
     flex-direction: column;
@@ -281,25 +297,33 @@ enum JoypadHTML {
   <div class="rotate">Turn the iPhone sideways</div>
   <header>
     <div class="brand">JOYPAD</div>
-    <div class="modes" id="modes">
-      <button class="mode on" data-style="8">8</button>
-      <button class="mode" data-style="6">6</button>
-      <button class="mode" data-style="4">4</button>
+    <div class="controls">
+      <div class="seg" id="modes">
+        <span class="seg-k">Buttons</span>
+        <button class="opt on" type="button" tabindex="-1" data-style="8">8</button>
+        <button class="opt" type="button" tabindex="-1" data-style="6">6</button>
+        <button class="opt" type="button" tabindex="-1" data-style="4">4</button>
+      </div>
+      <div class="seg" id="gates">
+        <span class="seg-k">Stick</span>
+        <button class="opt on" type="button" tabindex="-1" data-stick="8">8-way</button>
+        <button class="opt" type="button" tabindex="-1" data-stick="4">4-way</button>
+      </div>
     </div>
     <div class="pill"><span class="dot" id="dot"></span><span id="status">Connecting…</span></div>
   </header>
-  <div class="stage" id="stage" data-style="8">
+  <div class="stage" id="stage" data-style="8" data-stick="8">
     <div class="pad" id="pad">
       <div class="dpad" id="dpad">
         <div class="ring"></div>
         <div class="dir north" data-key="up">▲</div>
-        <div class="dir ne diag" data-diag="ne">◆</div>
+        <div class="dir ne diag" data-key="ne">↗</div>
         <div class="dir east" data-key="right">▶</div>
-        <div class="dir se diag" data-diag="se">◆</div>
+        <div class="dir se diag" data-key="se">↘</div>
         <div class="dir south" data-key="down">▼</div>
-        <div class="dir sw diag" data-diag="sw">◆</div>
+        <div class="dir sw diag" data-key="sw">↙</div>
         <div class="dir west" data-key="left">◀</div>
-        <div class="dir nw diag" data-diag="nw">◆</div>
+        <div class="dir nw diag" data-key="nw">↖</div>
         <div class="hub"></div>
       </div>
     </div>
@@ -329,7 +353,7 @@ enum JoypadHTML {
     const style = String(count) === "4" || String(count) === "6" ? String(count) : "8";
     keysEl.dataset.style = style;
     document.getElementById("stage").dataset.style = style;
-    document.querySelectorAll(".mode").forEach((el) => el.classList.toggle("on", el.dataset.style === style));
+    document.querySelectorAll("#modes .opt").forEach((el) => el.classList.toggle("on", el.dataset.style === style));
     document.querySelectorAll("#keys .btn").forEach((el) => {
       const min = Number(el.dataset.min || 4);
       if (min > Number(style) && held.get(el.dataset.key)) send(el.dataset.key, false);
@@ -369,6 +393,7 @@ enum JoypadHTML {
 
   const bindButton = (el) => {
     const key = el.dataset.key;
+    el.tabIndex = -1;
     el.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       pointers.set(e.pointerId, key);
@@ -385,34 +410,21 @@ enum JoypadHTML {
   window.addEventListener("pointerup", releasePointer);
   window.addEventListener("pointercancel", releasePointer);
 
-  document.querySelectorAll(".mode").forEach((el) => {
+  document.querySelectorAll("#modes .opt").forEach((el) => {
     el.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       e.stopPropagation();
       applyStyle(el.dataset.style);
+      el.blur();
     });
   });
   try { applyStyle(localStorage.getItem("joypad.style") || "8"); } catch (_) { applyStyle("8"); }
 
   const dpad = document.getElementById("dpad");
-  const allDirs = ["up", "down", "left", "right"];
-  const octants = [
-    ["right"],
-    ["down", "right"],
-    ["down"],
-    ["down", "left"],
-    ["left"],
-    ["up", "left"],
-    ["up"],
-    ["up", "right"]
-  ];
+  const allDirs = ["up", "ne", "right", "se", "down", "sw", "left", "nw"];
+  const octants = ["right", "se", "down", "sw", "left", "nw", "up", "ne"];
   const applyDirs = (next) => {
     allDirs.forEach((k) => send(k, next.has(k)));
-    const up = next.has("up"), down = next.has("down"), left = next.has("left"), right = next.has("right");
-    document.querySelector(".ne")?.classList.toggle("pressed", up && right);
-    document.querySelector(".se")?.classList.toggle("pressed", down && right);
-    document.querySelector(".sw")?.classList.toggle("pressed", down && left);
-    document.querySelector(".nw")?.classList.toggle("pressed", up && left);
   };
   const fromPoint = (x, y) => {
     const r = dpad.getBoundingClientRect();
@@ -421,17 +433,15 @@ enum JoypadHTML {
     const dist = Math.hypot(dx, dy);
     const next = new Set();
     if (dist <= r.width * 0.12) return next;
-    const eightWay = document.getElementById("stage").dataset.style === "6";
+    const eightWay = document.getElementById("stage").dataset.stick !== "4";
     if (eightWay) {
       let deg = Math.atan2(dy, dx) * 180 / Math.PI;
       if (deg < 0) deg += 360;
-      const oct = Math.round(deg / 45) % 8;
-      octants[oct].forEach((k) => next.add(k));
+      next.add(octants[Math.round(deg / 45) % 8]);
       return next;
     }
-    const adx = Math.abs(dx), ady = Math.abs(dy);
-    if (adx > ady * 0.28) next.add(dx < 0 ? "left" : "right");
-    if (ady > adx * 0.28) next.add(dy < 0 ? "up" : "down");
+    if (Math.abs(dx) > Math.abs(dy)) next.add(dx < 0 ? "left" : "right");
+    else next.add(dy < 0 ? "up" : "down");
     return next;
   };
   let dpadOn = false;
@@ -453,6 +463,23 @@ enum JoypadHTML {
   };
   dpad.addEventListener("pointerup", endPad);
   dpad.addEventListener("pointercancel", endPad);
+
+  const applyStick = (ways) => {
+    const stick = String(ways) === "4" ? "4" : "8";
+    document.getElementById("stage").dataset.stick = stick;
+    document.querySelectorAll("#gates .opt").forEach((el) => el.classList.toggle("on", el.dataset.stick === stick));
+    applyDirs(new Set());
+    try { localStorage.setItem("joypad.stick", stick); } catch (_) {}
+  };
+  document.querySelectorAll("#gates .opt").forEach((el) => {
+    el.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      applyStick(el.dataset.stick);
+      el.blur();
+    });
+  });
+  try { applyStick(localStorage.getItem("joypad.stick") || "8"); } catch (_) { applyStick("8"); }
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {

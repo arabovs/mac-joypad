@@ -68,25 +68,21 @@ struct ContentView: View {
 
     private var urlCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Open this in the iPhone browser. Type http:// — Chrome hangs on https://")
+            Text("Open in Safari on the iPhone. Use http:// — not https://.")
                 .font(.headline)
                 .fixedSize(horizontal: false, vertical: true)
-                .help("Open this in the iPhone browser. Type http:// — Chrome hangs on https://")
             Text(model.preferredURL)
                 .font(.system(size: 16, weight: .semibold, design: .monospaced))
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
-                .help(model.preferredURL)
             Text(statusLine)
                 .font(.caption)
                 .foregroundStyle(statusOK ? .green : .orange)
                 .fixedSize(horizontal: false, vertical: true)
-                .help(statusLine)
             Text(model.lastIncoming)
                 .font(.caption)
                 .foregroundStyle(model.lastIncoming.hasPrefix("Reached") ? .green : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
-                .help(model.lastIncoming)
             HStack(alignment: .center, spacing: 16) {
                 QRCodeView(text: model.preferredURL)
                     .frame(width: 120, height: 120)
@@ -117,11 +113,11 @@ struct ContentView: View {
     private var statusLine: String {
         switch model.connectionPath {
         case .wifi:
-            return "No cable needed. iPhone and Mac must be on the same Wi‑Fi. Turn Personal Hotspot off."
+            return "Same Wi‑Fi as the Mac. Personal Hotspot off."
         case .cable:
             return model.usbSetupReady
-                ? "USB network is up."
-                : "USB needs Internet Sharing on the Mac so the cable can carry the page."
+                ? "USB ready."
+                : "Turn on Internet Sharing so the cable can carry the page."
         }
     }
 
@@ -137,13 +133,13 @@ struct ContentView: View {
     private var openEmuHelp: String {
         switch model.hidState {
         case .live:
-            return "OpenEmu: the Karabiner virtual keyboard is live. Keep Input set to Keyboard and use the bindings you already made. Grant OpenEmu Input Monitoring if the game still sees nothing."
+            return "OpenEmu: Karabiner keyboard is live. Input = Keyboard."
         case .needsKarabiner:
-            return "OpenEmu needs Karabiner-Elements once. Install it, allow the system extension, then come back and allow the Joypad HID helper. Cursor keys still work without that."
+            return "OpenEmu needs Karabiner-Elements, then Allow HID helper."
         case .needsApproval:
-            return "Karabiner is installed. Click Allow HID helper, then enable Joypad in Login Items / Background Items. macOS will ask for an admin password once."
+            return "Click Allow HID helper and enable Joypad in Login Items."
         case .helperOff:
-            return "The HID helper is registered but the Karabiner virtual keyboard is not ready. Open Karabiner-Elements once so its driver is running, then retry a pad button."
+            return "Open Karabiner-Elements once so its driver is running."
         }
     }
 
@@ -155,15 +151,13 @@ struct ContentView: View {
             Text("Sending into: \(model.targetName)")
                 .font(.caption.monospaced())
                 .fixedSize(horizontal: false, vertical: true)
-                .help("Sending into: \(model.targetName)")
             Text(model.lastSend)
                 .font(.caption.monospaced())
                 .foregroundStyle(model.lastSend.contains("BLOCKED") ? .red : .secondary)
                 .fixedSize(horizontal: false, vertical: true)
-                .help(model.lastSend)
             Text(model.accessibilityTrusted
-                 ? "Click into Cursor (or TextEdit), then use the phone. Flicker on this window is only the preview — keys go to the app in front."
-                 : "The pad on the phone is fine. macOS still has to allow this copy of Joypad to type. Remove every Joypad row, click +, add /Applications/Joypad.app, turn it on, then quit and reopen Joypad.")
+                 ? "Click the game, then use the phone."
+                 : "Allow this copy of Joypad in Accessibility, then quit and reopen.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -171,11 +165,9 @@ struct ContentView: View {
                 .font(.caption)
                 .foregroundStyle(model.hidState.isLive ? Color.secondary : Color.orange)
                 .fixedSize(horizontal: false, vertical: true)
-                .help(model.hidState.chipTitle)
             HStack(spacing: 8) {
                 Button("Open Accessibility settings") { model.openAccessibilitySettings() }
                     .buttonStyle(.borderedProminent)
-                    .help("Opens System Settings → Privacy & Security → Accessibility")
                 if !model.karabinerInstalled {
                     Button("Get Karabiner-Elements") { model.openKarabinerDownload() }
                 } else if !model.hidState.isLive {
@@ -194,16 +186,14 @@ struct ContentView: View {
     private var help: some View {
         VStack(alignment: .leading, spacing: 6) {
             if model.connectionPath == .wifi {
-                helpLine("1. Put the iPhone on the same Wi‑Fi as this Mac. Turn Personal Hotspot OFF.")
-                helpLine("2. Open Safari, or Chrome with Always use secure connections OFF, to \(model.preferredURL)")
-                helpLine("3. Click Cursor or the game, then use the phone. D‑pad = arrows. QWER/ASDF = buttons. Select = J. Start = K.")
-                helpLine("OpenEmu: keep Input set to Keyboard (the bindings you already made). Install Karabiner-Elements, allow the Joypad HID helper, and give OpenEmu Input Monitoring.")
+                helpLine("1. Same Wi‑Fi as the Mac. Personal Hotspot off.")
+                helpLine("2. Safari to \(model.preferredURL)")
+                helpLine("3. Click the game, then play.")
             } else {
-                helpLine("1. Plug the iPhone in with USB‑C and tap Trust. Turn Personal Hotspot OFF.")
-                helpLine("2. On the Mac click Open Internet Sharing. Share Wi‑Fi to iPhone USB, then enable Internet Sharing.")
-                helpLine("3. Open Safari, or Chrome with Always use secure connections OFF, to http://192.168.2.1:7777")
-                helpLine("4. Click Cursor or the game, then use the phone. D‑pad = arrows. QWER/ASDF = buttons. Select = J. Start = K.")
-                helpLine("OpenEmu: keep Input set to Keyboard (the bindings you already made). Install Karabiner-Elements, allow the Joypad HID helper, and give OpenEmu Input Monitoring.")
+                helpLine("1. Plug in USB‑C and tap Trust. Personal Hotspot off.")
+                helpLine("2. Internet Sharing: Wi‑Fi → iPhone USB.")
+                helpLine("3. Safari to http://192.168.2.1:7777")
+                helpLine("4. Click the game, then play.")
             }
         }
         .font(.caption)
@@ -214,7 +204,6 @@ struct ContentView: View {
     private func helpLine(_ text: String) -> some View {
         Text(text)
             .fixedSize(horizontal: false, vertical: true)
-            .help(text)
     }
 }
 
@@ -242,12 +231,20 @@ struct PadPreview: View {
     var body: some View {
         HStack(spacing: 24) {
             VStack(spacing: 6) {
-                key("up", "▲")
+                HStack(spacing: 6) {
+                    key("nw", "↖")
+                    key("up", "▲")
+                    key("ne", "↗")
+                }
                 HStack(spacing: 6) {
                     key("left", "◀")
                     key("right", "▶")
                 }
-                key("down", "▼")
+                HStack(spacing: 6) {
+                    key("sw", "↙")
+                    key("down", "▼")
+                    key("se", "↘")
+                }
             }
             VStack(spacing: 8) {
                 HStack(spacing: 8) {

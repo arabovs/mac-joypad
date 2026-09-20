@@ -41,6 +41,10 @@ uint16_t usage_for_key(const std::string &key) {
     if (key == "down") return type_safe::get(keyboard_down_arrow);
     if (key == "left") return type_safe::get(keyboard_left_arrow);
     if (key == "right") return type_safe::get(keyboard_right_arrow);
+    if (key == "ne") return type_safe::get(keypad_9);
+    if (key == "se") return type_safe::get(keypad_3);
+    if (key == "sw") return type_safe::get(keypad_1);
+    if (key == "nw") return type_safe::get(keypad_7);
     return 0;
 }
 

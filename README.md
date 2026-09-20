@@ -1,60 +1,48 @@
 # Joypad
 
-Turn an iPhone into a Mac controller. Open the pad in Safari, then use the D‑pad and buttons on the phone. Cursor and other Mac apps get typed keys. OpenEmu games need Karabiner’s virtual keyboard (see below).
+<p align="center">
+  <img src="Assets/AppIcon.png" width="128" alt="Joypad">
+</p>
 
-| iPhone | Mac key |
+Use an iPhone as a Mac gamepad. The pad is a page in Safari. The Mac app sends keys to whatever is in front.
+
+| Phone | Mac |
 | --- | --- |
-| D‑pad | Arrow keys |
-| Q W E R | Q W E R |
-| A S D F | A S D F |
+| Stick N E S W | Arrow keys |
+| Stick NE SE SW NW (8-way) | Numpad 9 3 1 7 |
+| Q W E R / A S D F | Same keys |
 | Select / Start | J / K |
 
-## Run locally
+8-way corners are their own keys, not two arrows at once. Use **Stick 4-way** if the game only wants cardinals.
 
-From the project folder:
+## Build
 
 ```bash
-cd /path/to/joypad
 ./build.sh
 open /Applications/Joypad.app
 ```
 
-`./build.sh` compiles a release app, copies it to `dist/Joypad.app` and `/Applications/Joypad.app`, and ad-hoc signs it. The first build clones Karabiner VirtualHIDDevice headers into `vendor/` (gitignored). You need Xcode Command Line Tools (`clang++`, `swift`).
+Needs macOS 14+ and Xcode Command Line Tools. The first build clones Karabiner headers into `vendor/` (not in git). After a rebuild, open `/Applications/Joypad.app` again. macOS may ask to allow the network and Accessibility.
 
-Always launch **`/Applications/Joypad.app`** after a rebuild (or `open dist/Joypad.app`). macOS may ask to allow incoming network connections — choose Allow.
+## Use
 
-Rebuilds change the code signature, so Accessibility may need to be granted again for that copy of Joypad.
+1. Open Joypad and allow **Accessibility**.
+2. **Wi‑Fi:** same network as the Mac, Personal Hotspot off. Safari to the `http://` link in the window.
+3. **Cable:** plug in USB‑C, tap Trust. On the Mac, share Wi‑Fi to **iPhone USB** (Internet Sharing), then Safari to `http://192.168.2.1:7777`.
+4. Click the game, then play.
 
-## Use it
+Use **Safari** and `http://`. Chrome’s HTTPS-First mode hangs. Add the page to the Home Screen for a fullscreen pad.
 
-1. Open **Joypad** on the Mac.
-2. Allow **Accessibility** (System Settings → Privacy & Security → Accessibility → Joypad). The window has **Open Accessibility settings**.
-3. Pick **Wi‑Fi** or **Cable** in the app.
+## OpenEmu
 
-**Wi‑Fi:** iPhone and Mac on the same network, Personal Hotspot off. Open **Safari** to the `http://` link shown in Joypad (Chrome hangs if it upgrades to https).
+Games ignore fake Mac keystrokes. Install [Karabiner-Elements](https://karabiner-elements.pqrs.org/), allow its system extension, then **Allow HID helper** in Joypad. Set OpenEmu **Input = Keyboard**. If the game still sees nothing, grant **Input Monitoring** to OpenEmu.
 
-**Cable:** plug in USB‑C and tap Trust. Personal Hotspot off. On the Mac, **Open Internet Sharing**, share Wi‑Fi to **iPhone USB**, turn Internet Sharing on. On the iPhone, Safari to `http://192.168.2.1:7777`.
+Cursor and TextEdit only need Accessibility.
 
-4. Click Cursor, TextEdit, or the game so it is focused, then use the phone.
+## Security
 
-Add the page to the iPhone Home Screen from Safari for a fullscreen controller.
+The pad is on your local network. Do not port-forward port 7777. Keys go to the frontmost Mac app.
 
-Cursor and TextEdit work after Accessibility. **OpenEmu games need Karabiner** (next section).
+## License
 
-## Karabiner-Elements
-
-OpenEmu’s running game ignores fake keystrokes. It only sees a real HID keyboard. Joypad uses **Karabiner-Elements** for that.
-
-1. Download and install **[Karabiner-Elements](https://karabiner-elements.pqrs.org/)**.
-2. Open Karabiner once and **allow the system extension** when macOS asks. You do not need remaps or extra Karabiner rules — only the driver.
-3. In Joypad, click **Allow HID helper**, then enable Joypad in **Login Items / Background Items** (admin password once).
-4. Wait until the Joypad chip says **OpenEmu keyboard live**.
-5. In OpenEmu, keep **Input = Keyboard** with the bindings above. If the game still sees nothing, grant **Input Monitoring** to **OpenEmu** (not Joypad).
-
-Without Karabiner, the phone pad still types into Cursor; OpenEmu in-game will not see it.
-
-## Notes
-
-- Keys go to the frontmost Mac app, so click the game after opening the controller.
-- Keep Joypad running while you play. A menu bar controller icon stays available if the window is closed.
-- Use Safari and `http://`. Chrome’s HTTPS-First mode will hang on the pad page.
+[MIT](LICENSE)

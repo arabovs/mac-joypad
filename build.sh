@@ -29,8 +29,6 @@ clang++ -std=c++23 -O2 \
   -pthread
 chmod +x "$APP/Contents/MacOS/Joypad" "$APP/Contents/MacOS/joypad-hid"
 
-# Restricted HID entitlement cannot ship on an ad-hoc signature (launchd error 163).
-# OpenEmu uses the Karabiner virtual keyboard via joypad-hid instead.
 if command -v codesign >/dev/null; then
   codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
 fi
